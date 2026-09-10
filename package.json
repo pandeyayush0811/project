@@ -1,0 +1,21 @@
+{
+  "name": "utkio-voice-test",
+  "version": "1.0.0",
+  "description": "Utkio On-Device Voice Architecture Test App",
+  "main": "index.js",
+  "scripts": {
+    "build": "powershell -Command \"Copy-Item index.html,app.js,style.css -Destination www -Force\"",
+    "cap:sync": "npm run build && cap sync android",
+    "cap:open": "cap open android"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0"
+  }
+}
