@@ -9,6 +9,7 @@
     "dev": "node scripts/server.js",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open": "npx cap open android",
+    "test": "node tests/runner.js",
     "android:build": "npm run cap:sync && cd android && .\\gradlew assembleDebug",
     "android:run": "npm run cap:sync && cd android && .\\gradlew installDebug"
   },

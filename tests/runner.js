@@ -14,7 +14,8 @@ const testSuites = [
   { bug: 'Bug 4', file: 'test_bug4_mic_permissions.js', title: 'Android WebView Mic Permissions & Audio Capture' },
   { bug: 'Bug 13', file: 'test_bug13_layout_thrashing.js', title: 'Synchronous DOM Geometry Reads & Layout Thrashing' },
   { bug: 'Bug 18', file: 'test_bug18_tts_fallback.js', title: 'Silent Fallback When No Speech Synthesis Engine Detected' },
-  { bug: 'Bugs 21 & 24', file: 'test_bug21_24_stt_voice.js', title: 'Android STT Pipeline Deadlock & Indian Male Voice Resolution' }
+  { bug: 'Bugs 21 & 24', file: 'test_bug21_24_stt_voice.js', title: 'Android STT Pipeline Deadlock & Indian Male Voice Resolution' },
+  { bug: 'Safe Version 3.0', file: 'test_safe_version_3_stt_bridge.js', title: 'Native STT Bridge, AudioRecord Lifecycle & Auto-Fallback' }
 ];
 
 console.log('======================================================================');
@@ -29,7 +30,7 @@ let totalPassed = 0;
 const suiteSummaries = [];
 
 testSuites.forEach((suite, idx) => {
-  console.log(`\n[Suite ${idx + 1}/5] Running ${suite.bug}: ${suite.title}...`);
+  console.log(`\n[Suite ${idx + 1}/${testSuites.length}] Running ${suite.bug}: ${suite.title}...`);
   const filePath = path.join(__dirname, suite.file);
   
   const result = spawnSync('node', ['--test', filePath], {
