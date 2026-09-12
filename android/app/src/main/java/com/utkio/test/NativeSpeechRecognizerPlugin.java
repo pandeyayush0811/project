@@ -79,8 +79,10 @@ public class NativeSpeechRecognizerPlugin extends Plugin {
                 if (preferOffline) {
                     recognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
                 }
-                recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L);
-                recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1800L);
+                int completeSilence = call.getInt("completeSilenceMs", 900);
+                int possiblyCompleteSilence = call.getInt("possiblyCompleteSilenceMs", 800);
+                recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, (long) completeSilence);
+                recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, (long) possiblyCompleteSilence);
 
                 speechRecognizer.startListening(recognizerIntent);
                 isListening = true;

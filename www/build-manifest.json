@@ -1,14 +1,14 @@
 {
-  "buildTime": "2026-09-12T18:29:43.592Z",
+  "buildTime": "2026-09-12T19:31:50.933Z",
   "packageVersion": "1.0.0",
   "files": {
     "index.html": {
-      "size": 9037,
-      "hash": "cf6472c66f54609fd9348257e2ed06ff46206f28b52a5fad6049cbc8ca365019"
+      "size": 9624,
+      "hash": "08861bad09a90c1057dc8c9cc021a2e383ce87a03007ffb0e47c67335c822a23"
     },
     "app.js": {
-      "size": 71285,
-      "hash": "3e41cc9e90eba04be920de4c94c3992d3e5e36bfa7eb524724b27c90c07cfcdd"
+      "size": 68378,
+      "hash": "887607a60b2a2f3e2d799df454e98f334a85a20a47c62235f0eac4780382191e"
     },
     "style.css": {
       "size": 12689,

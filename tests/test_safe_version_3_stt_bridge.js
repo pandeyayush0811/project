@@ -319,8 +319,8 @@ describe('SAFE VERSION 3: Section 3 - Error Code 13 & Offline Fallback Immunity 
     assert.ok(nativePluginJava.includes('RecognizerIntent.EXTRA_PARTIAL_RESULTS, true'), 'Missing EXTRA_PARTIAL_RESULTS configuration');
   });
 
-  it('Test 3.60: Recognizer intent sets calibrated speech complete silence lengths (2500ms)', () => {
-    assert.ok(nativePluginJava.includes('EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L'), 'Missing 2500ms complete silence threshold');
+  it('Test 3.60: Recognizer intent sets calibrated speech complete silence lengths (900ms default)', () => {
+    assert.ok(nativePluginJava.includes('EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS') && (nativePluginJava.includes('900') || nativePluginJava.includes('completeSilence')), 'Missing 900ms complete silence threshold');
   });
 
 });

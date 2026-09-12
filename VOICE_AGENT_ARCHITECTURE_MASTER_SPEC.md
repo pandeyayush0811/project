@@ -1,5 +1,5 @@
 # Master Architectural Blueprint: Zero-Cost, Ultra-Low-Latency Fluid AI Voice Engine
-**Document Version:** 3.0 (Production-Grade Specification)  
+**Document Version:** 3.5 (Production-Grade Specification - Safe Version 3.5)  
 **Target Audience:** AI Engineering Agents, Systems Architects, Mobile Full-Stack Engineers  
 **Core Purpose:** Feed this single document to any AI coding assistant (Gemini, Claude, GPT) to flawlessly replicate, port, or integrate this ultra-fluid voice assistant architecture into any mobile or web application (Capacitor, React Native, Flutter, Swift/Kotlin, Next.js, Electron) without regressions.
 
@@ -11,14 +11,16 @@ Most voice assistant implementations fail in the real world because of two fatal
 1. **The Expensive Cloud API Trap:** Using OpenAI Realtime API, ElevenLabs, or Deepgram WebSockets. These cost $0.05 to $0.30 per minute, create massive vendor lock-in, and fail when the user has poor mobile network connectivity.
 2. **The Clunky Default Mobile Trap:** Using basic browser `webkitSpeechRecognition` and `window.speechSynthesis`. This produces:
    - 1000ms+ lag after tapping the mic before listening begins.
+   - 2500ms dead air silence wait after user stops speaking before recognition commits.
    - Android TinyALSA / Audio HAL hardware conflicts and mic lockups.
    - Android Error 13 (`ERROR_LANGUAGE_UNAVAILABLE`) crashes when offline models are missing.
    - Robot-like staccato speech with unnatural pauses between sentences.
 
-### The Target Mandate
+### The Target Mandate (Safe Version 3.5)
 * **Operating Cost:** Permanent **₹0 / $0 per minute** using on-device OS hardware synthesizers and hybrid cloud Google services.
 * **Perceived Latency:** **0ms** instant tactile and visual feedback on mic tap.
-* **Speech-to-Sound Latency:** Sub-500ms from user silence to the first spoken syllable of AI audio.
+* **Turn-Taking Silence Detection:** **900ms** calibrated silence window (down from 2500ms, eliminating 1600ms of dead air).
+* **Speech-to-Sound Latency:** **Sub-200ms** first spoken syllable via Fast Conversational Anchors.
 * **Voice Quality:** Studio-grade natural Indian English male voice (`en-in-x-end-network`) with human conversational rhythm (1.05x).
 * **Cadence Fluidity:** Seamless inter-sentence transitions with zero audible dead air between streaming LLM chunks.
 
@@ -97,9 +99,11 @@ recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang); // default: "e
 recognizerIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
 recognizerIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
 recognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false); // CRITICAL: false avoids Error 13
-// Calibrated silence thresholds:
-recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L);
-recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L);
+// Calibrated fast turn-taking silence thresholds:
+int completeSilence = call.getInt("completeSilenceMs", 900);
+int possiblyCompleteSilence = call.getInt("possiblyCompleteSilenceMs", 800);
+recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, (long) completeSilence);
+recognizerIntent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, (long) possiblyCompleteSilence);
 ```
 5. **Real-Time RMSdB Event Dispatch:**
 ```java

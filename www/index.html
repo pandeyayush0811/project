@@ -159,6 +159,15 @@
       </div>
 
       <div class="form-group">
+        <label for="thinkingLevelSelect">Reasoning / Thinking Level</label>
+        <select id="thinkingLevelSelect" class="form-input">
+          <option value="LOW" selected>LOW (Fastest Voice Response - Recommended)</option>
+          <option value="HIGH">HIGH (Deep Reasoning)</option>
+        </select>
+        <span style="font-size:0.72rem; color:var(--ink-dim);">Controls reasoning overhead for Gemini 2.5/3.x models. LOW minimizes TTFT for voice.</span>
+      </div>
+
+      <div class="form-group">
         <label for="voiceSelect">Assistant Voice (Google Speech Services)</label>
         <select id="voiceSelect" class="form-input">
           <option value="en-in-x-end-network">Google Indian Voice 1 - en-in-x-end (Male / High-Fi Cloud)</option>
@@ -172,6 +181,7 @@
       <div class="form-group">
         <label for="speedSelect">Speaking Speed</label>
         <select id="speedSelect" class="form-input">
+          <option value="1.05">1.05x (Conversational Human - Natural)</option>
           <option value="1.0">1.0x (Normal)</option>
           <option value="1.2">1.2x (Slightly Fast)</option>
           <option value="1.3" selected>1.3x (Fast - Recommended)</option>
@@ -184,6 +194,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=3e41cc9e"></script>
+  <script type="module" src="app.js?v=887607a6"></script>
 </body>
 </html>
