@@ -597,7 +597,7 @@ function warmTtsEngine() {
       dummy.rate = 2;
       window.speechSynthesis.speak(dummy);
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // Smart Clause & Sentence Chunker (Bug 2: chunker.reset())
@@ -772,7 +772,7 @@ function speakAudioChunk(text) {
             selectedNativeVoiceIndex = selectBestNativeVoiceIndex(vRes.voices);
             console.log(`[TTS] Lazy voice resolution succeeded: index ${selectedNativeVoiceIndex}`);
           }
-        }).catch(() => {}).finally(() => {
+        }).catch(() => { }).finally(() => {
           if (!settled) doSpeak();
         });
       } else {
@@ -844,7 +844,7 @@ async function playNextAudioQueueItem() {
     isPlayingAudio = false;
     isSpeaking = false;
     setUiState('idle', 'Coach finished speaking.');
-    
+
     if (autoRearmTimer) {
       clearTimeout(autoRearmTimer);
       autoRearmTimer = null;
@@ -1038,7 +1038,7 @@ async function handleUserTurn(userText) {
               scheduleTranscriptScroll();
               chunker.feed(textChunk);
             }
-          } catch (e) {}
+          } catch (e) { }
         }
       }
     }
@@ -1182,7 +1182,7 @@ const handleHeadsetUnplug = handleAudioRouteError;
 function releaseMicrophoneResources() {
   console.log('[AudioLifecycle] Suspending microphone capture and releasing hardware (releaseMicrophoneResources).');
   if (isListening && recognition) {
-    try { recognition.stop(); } catch (e) {}
+    try { recognition.stop(); } catch (e) { }
   }
 }
 const suspendMicrophoneCapture = releaseMicrophoneResources;
@@ -1322,7 +1322,7 @@ function resetSilenceTimer() {
   silenceWatchdogTimer = setTimeout(() => {
     if (isListening && recognition) {
       console.log('[STT Watchdog] Silence watchdog timeout reached.');
-      try { recognition.stop(); } catch (e) {}
+      try { recognition.stop(); } catch (e) { }
     }
   }, 12000);
   sttSilenceWatchdog = silenceWatchdogTimer;
@@ -1339,7 +1339,7 @@ function checkMicrophonePermissions() {
           if (micPermissionBanner) micPermissionBanner.style.display = 'flex';
         }
       };
-    }).catch(() => {});
+    }).catch(() => { });
   }
 }
 
@@ -1350,7 +1350,7 @@ function checkBatteryOptimization() {
       if (battery.level < 0.20 && !battery.charging) {
         console.warn('[PowerPolicy] Battery saver active (batterySaverAlert).');
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }
 }
 
@@ -1419,7 +1419,7 @@ function initApp() {
 
     if (isListening) {
       if (recognition) {
-        try { recognition.stop(); } catch (e) {}
+        try { recognition.stop(); } catch (e) { }
       }
       isListening = false;
       setUiState('idle');
