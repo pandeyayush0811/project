@@ -73,11 +73,24 @@ function verifyConfiguration() {
   }
 }
 
+function patchNativeTtsSpeechRate() {
+  const ttsJavaPath = path.join(rootDir, 'node_modules', '@capacitor-community', 'text-to-speech', 'android', 'src', 'main', 'java', 'com', 'getcapacitor', 'community', 'tts', 'TextToSpeech.java');
+  if (fs.existsSync(ttsJavaPath)) {
+    let code = fs.readFileSync(ttsJavaPath, 'utf-8');
+    const faultyPattern = /tts\.setLanguage\(locale\);\s+tts\.setSpeechRate\(rate\);\s+tts\.setPitch\(pitch\);(\s+if \(voice >= 0\) \{[\s\S]+?\}\s+\}\s+)tts\.speak/;
+    if (faultyPattern.test(code)) {
+      code = code.replace(faultyPattern, 'tts.setLanguage(locale);$1tts.setSpeechRate(rate);\n        tts.setPitch(pitch);\n        tts.speak');
+      fs.writeFileSync(ttsJavaPath, code, 'utf-8');
+    }
+  }
+}
+
 function stripConsole(code) {
   return code.replace(/console\.(log|debug)\([^)]*\);?/g, '/* stripped console */');
 }
 
 function runBuild() {
+  patchNativeTtsSpeechRate();
   console.log('[Build] Starting atomic asset synchronization to www/...');
 
   if (isDryRun) {
