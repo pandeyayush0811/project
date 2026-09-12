@@ -651,7 +651,7 @@ describe('SAFE VERSION 3: Section 6 - Persistent Permission Caching & Audio Focu
   });
 
   it('Test 3.118: speakAudioChunk passes voice parameter into nativeTts.speak', () => {
-    const speakDef = appJsCode.slice(appJsCode.indexOf('function speakAudioChunk('), appJsCode.indexOf('function speakAudioChunk(') + 1200);
+    const speakDef = appJsCode.slice(appJsCode.indexOf('function speakAudioChunk('), appJsCode.indexOf('function speakAudioChunk(') + 2000);
     assert.ok(speakDef.includes('speakParams.voice = selectedNativeVoiceIndex'), 'speakAudioChunk does not pass selectedNativeVoiceIndex');
   });
 

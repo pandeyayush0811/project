@@ -315,6 +315,8 @@ function triggerBargeIn() {
     activeSentenceChunker.reset();
   }
   audioQueue = [];
+  inFlightUtteranceCount = 0;
+  isStreamActive = false;
   isPlayingAudio = false;
   isSpeaking = false;
   isThinking = false;
@@ -613,33 +615,9 @@ class SentenceChunker {
 
   feed(token) {
     this.buffer += token;
-    const sentenceBoundary = /([.!?]+[\s\n]+|[\n]+)/;
-    const clauseBoundary = /([,;:—]+[\s]+)/;
+    // Sentence boundary: split strictly on sentence terminators (. ! ?) followed by whitespace or newline
+    const sentenceBoundary = /(?<!\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|e\.g|i\.e))(?<!\d)[.!?]+(\s+|$)|[\n]+/;
     const words = this.buffer.trim().split(/\s+/);
-
-    if (this.chunkCount === 0) {
-      if (words.length >= 2) {
-        let match = this.buffer.match(clauseBoundary) || this.buffer.match(sentenceBoundary);
-        if (match) {
-          const splitIdx = match.index + match[0].length;
-          const readyChunk = this.buffer.slice(0, splitIdx).trim();
-          this.buffer = this.buffer.slice(splitIdx);
-          if (readyChunk) {
-            this.chunkCount++;
-            this.onChunkReady(readyChunk);
-            return;
-          }
-        }
-      }
-      if (words.length >= 5) {
-        const readyChunk = this.buffer.trim();
-        this.buffer = '';
-        this.chunkCount++;
-        this.onChunkReady(readyChunk);
-        return;
-      }
-      return;
-    }
 
     let sentMatch = this.buffer.match(sentenceBoundary);
     if (sentMatch) {
@@ -653,8 +631,11 @@ class SentenceChunker {
       return;
     }
 
-    if (words.length >= 6) {
-      let clauseMatch = this.buffer.match(clauseBoundary);
+    // Safety fallback only for extreme run-on sentences without punctuation (>16 words)
+    // Splits only on major clause markers (semicolon, colon, em-dash)
+    if (words.length >= 16) {
+      const majorClause = /([;:—]+[\s]+)/;
+      let clauseMatch = this.buffer.match(majorClause);
       if (clauseMatch) {
         const splitIdx = clauseMatch.index + clauseMatch[0].length;
         const readyChunk = this.buffer.slice(0, splitIdx).trim();
@@ -667,7 +648,8 @@ class SentenceChunker {
       }
     }
 
-    if (words.length >= 9) {
+    // Ultimate emergency fallback: >22 words with zero punctuation
+    if (words.length >= 22) {
       const readyChunk = this.buffer.trim();
       this.buffer = '';
       this.chunkCount++;
@@ -690,12 +672,14 @@ class SentenceChunker {
   }
 }
 
-// Queue-Based Pipelined Audio Synthesizer
+// Queue-Based Pipelined Audio Synthesizer State
+let inFlightUtteranceCount = 0;
+let isStreamActive = false;
+
 function enqueueAudioChunk(text, isFirstChunk = false) {
-  audioQueue.push({ text, isFirstChunk });
-  if (!isPlayingAudio) {
-    playNextAudioQueueItem();
-  }
+  if (!text || !text.trim()) return;
+  audioQueue.push({ text: text.trim(), isFirstChunk });
+  playNextAudioQueueItem();
 }
 
 function showVoicePackAlert() {
@@ -716,7 +700,8 @@ function simulateReadingDelay(text) {
 const textReadingDelay = simulateReadingDelay;
 
 // Unified Audio Output Driver (Native Capacitor TTS + Web SpeechSynthesis Fallback)
-function speakAudioChunk(text) {
+function speakAudioChunk(text, options = {}) {
+  const queueStrategy = (options && typeof options.queueStrategy === 'number') ? options.queueStrategy : 0;
   if (isTextOnlyMode) {
     return simulateReadingDelay(text);
   }
@@ -736,16 +721,17 @@ function speakAudioChunk(text) {
       }, watchdogMs);
 
       const doSpeak = () => {
-        const savedSpeed = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('utkio_test_speech_rate') || '1.30') : 1.30;
-        const activeRate = (isNaN(savedSpeed) || savedSpeed <= 0) ? 1.30 : savedSpeed;
-        console.log(`[NativeTTS] Speaking with rate: ${activeRate}x`);
+        const savedSpeed = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('utkio_test_speech_rate') || '1.05') : 1.05;
+        const activeRate = (isNaN(savedSpeed) || savedSpeed <= 0) ? 1.05 : savedSpeed;
+        console.log(`[NativeTTS] Speaking with rate: ${activeRate}x (queueStrategy: ${queueStrategy})`);
         const speakParams = {
           text: text,
           lang: 'en-IN',
           rate: activeRate,
           pitch: 1.0,
           volume: 1.0,
-          category: 'ambient'
+          category: 'ambient',
+          queueStrategy: queueStrategy
         };
         if (selectedNativeVoiceIndex >= 0) {
           speakParams.voice = selectedNativeVoiceIndex;
@@ -795,8 +781,8 @@ function speakAudioChunk(text) {
         }
       }, watchdogMs);
 
-      const savedSpeed = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('utkio_test_speech_rate') || '1.30') : 1.30;
-      const activeRate = (isNaN(savedSpeed) || savedSpeed <= 0) ? 1.30 : savedSpeed;
+      const savedSpeed = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('utkio_test_speech_rate') || '1.05') : 1.05;
+      const activeRate = (isNaN(savedSpeed) || savedSpeed <= 0) ? 1.05 : savedSpeed;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-IN';
       utterance.rate = activeRate;
@@ -845,8 +831,9 @@ function speakAudioChunk(text) {
   }
 }
 
-async function playNextAudioQueueItem() {
-  if (audioQueue.length === 0) {
+function checkAudioCompletion() {
+  if (inFlightUtteranceCount <= 0 && !isStreamActive && audioQueue.length === 0) {
+    inFlightUtteranceCount = 0;
     isPlayingAudio = false;
     isSpeaking = false;
     setUiState('idle', 'Coach finished speaking.');
@@ -869,34 +856,66 @@ async function playNextAudioQueueItem() {
         }
       }
     }, rearmDelay);
-    return;
   }
+}
 
-  isPlayingAudio = true;
-  isSpeaking = true;
-  setUiState('speaking');
+async function playNextAudioQueueItem() {
+  const nativeTts = getNativeTtsPlugin();
+  const canHardwarePipeline = !isTextOnlyMode && (nativeTts || (typeof window !== 'undefined' && window.speechSynthesis));
 
-  const { text, isFirstChunk } = audioQueue.shift();
-
-  if (isFirstChunk && firstAudioTime === 0) {
-    firstAudioTime = performance.now();
-    const ttsLatency = Math.round(firstAudioTime - userSpeechEndTime);
-    metricTts.textContent = `${ttsLatency}ms`;
-    console.log(`[Pipelining] First sound played in ${ttsLatency}ms from user silence!`);
-  }
-
-  try {
-    await speakAudioChunk(text);
-    if (isPlayingAudio) {
-      playNextAudioQueueItem();
+  if (!isPlayingAudio) {
+    if (audioQueue.length === 0) {
+      checkAudioCompletion();
+      return;
     }
-  } catch (err) {
-    console.error('[TTS Playback Fatal Error]', err);
-    audioQueue = [];
-    isPlayingAudio = false;
-    isSpeaking = false;
-    setUiState('error', 'Audio playback failed: No speech engine available.');
-    if (metricTts) metricTts.textContent = 'UNAVAILABLE';
+
+    isPlayingAudio = true;
+    isSpeaking = true;
+    setUiState('speaking');
+
+    const firstItem = audioQueue.shift();
+
+    if (firstItem.isFirstChunk && firstAudioTime === 0) {
+      firstAudioTime = performance.now();
+      const ttsLatency = Math.round(firstAudioTime - userSpeechEndTime);
+      metricTts.textContent = `${ttsLatency}ms`;
+      console.log(`[Pipelining] First sound played in ${ttsLatency}ms from user silence!`);
+    }
+
+    inFlightUtteranceCount++;
+    speakAudioChunk(firstItem.text, { queueStrategy: 0, isFirstChunk: firstItem.isFirstChunk })
+      .then(() => {
+        inFlightUtteranceCount = Math.max(0, inFlightUtteranceCount - 1);
+        if (!canHardwarePipeline && isPlayingAudio) {
+          playNextAudioQueueItem();
+        } else {
+          checkAudioCompletion();
+        }
+      })
+      .catch((err) => {
+        console.error('[TTS Playback Fatal Error]', err);
+        inFlightUtteranceCount = Math.max(0, inFlightUtteranceCount - 1);
+        checkAudioCompletion();
+      });
+  }
+
+  // Pre-buffer any additional waiting chunks into native hardware queue (QUEUE_ADD)
+  if (canHardwarePipeline && isPlayingAudio) {
+    while (audioQueue.length > 0) {
+      const nextItem = audioQueue.shift();
+      inFlightUtteranceCount++;
+      console.log(`[Pipelining] Speculative pre-buffering into hardware queue (QUEUE_ADD): "${nextItem.text}"`);
+      speakAudioChunk(nextItem.text, { queueStrategy: 1, isFirstChunk: false })
+        .then(() => {
+          inFlightUtteranceCount = Math.max(0, inFlightUtteranceCount - 1);
+          checkAudioCompletion();
+        })
+        .catch((err) => {
+          console.warn('[TTS Hardware Buffer Error]', err);
+          inFlightUtteranceCount = Math.max(0, inFlightUtteranceCount - 1);
+          checkAudioCompletion();
+        });
+    }
   }
 }
 
@@ -944,6 +963,7 @@ function buildGeminiContents(history) {
 async function handleUserTurn(userText) {
   resetScrollState();
   isThinking = true;
+  isStreamActive = true;
   setUiState('thinking');
   firstTokenTime = 0;
   firstAudioTime = 0;
@@ -1053,6 +1073,9 @@ async function handleUserTurn(userText) {
     performance.measure('stream-chunk-render', 'stream-chunk-start');
 
     chunker.flush();
+    isStreamActive = false;
+    playNextAudioQueueItem();
+    checkAudioCompletion();
     if (fullAssistantResponse && fullAssistantResponse.trim().length > 0) {
       conversationHistory.push({ role: 'assistant', content: fullAssistantResponse.trim() });
     }
@@ -1060,6 +1083,8 @@ async function handleUserTurn(userText) {
 
   } catch (err) {
     isThinking = false;
+    isStreamActive = false;
+    inFlightUtteranceCount = 0;
     if (err.name === 'AbortError') {
       console.log('[Gemini Stream] Request aborted (user barge-in).');
       if (fullAssistantResponse && fullAssistantResponse.trim().length > 0) {
@@ -1091,6 +1116,7 @@ function verifySpeechEngineAvailability() {
 
 // Built-In Local Simulator for Instant Zero-Setup Testing
 function simulateStreamingResponse(userText, bubble, chunker) {
+  isStreamActive = true;
   firstTokenTime = performance.now();
   const ttft = Math.round(firstTokenTime - userSpeechEndTime);
   metricTtft.textContent = `${ttft}ms`;
@@ -1118,6 +1144,9 @@ function simulateStreamingResponse(userText, bubble, chunker) {
       currentSimulationInterval = null;
       simulationInterval = null;
       chunker.flush();
+      isStreamActive = false;
+      playNextAudioQueueItem();
+      checkAudioCompletion();
       isThinking = false;
       conversationHistory.push({ role: 'assistant', content: chosen });
     }

@@ -182,7 +182,7 @@ describe('BUG 24: Native Android TTS Voice Resolution & Google Indian Male Synth
   });
 
   it('Test 24.07: speakAudioChunk() passes voice parameter into nativeTts.speak()', () => {
-    const speakDef = appJsCode.slice(appJsCode.indexOf('function speakAudioChunk('), appJsCode.indexOf('function speakAudioChunk(') + 1200);
+    const speakDef = appJsCode.slice(appJsCode.indexOf('function speakAudioChunk('), appJsCode.indexOf('function speakAudioChunk(') + 2000);
     assert.ok(
       speakDef.includes('speakParams.voice = selectedNativeVoiceIndex'),
       'speakAudioChunk does not pass selectedNativeVoiceIndex into nativeTts.speak()'
