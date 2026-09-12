@@ -701,11 +701,8 @@ const textReadingDelay = simulateReadingDelay;
 
 // Unified Audio Output Driver (Native Capacitor TTS + Web SpeechSynthesis Fallback)
 function speakAudioChunk(text, options = {}) {
-  const queueStrategy = (options && typeof options.queueStrategy === 'number') ? options.queueStrategy : 0;
-  if (isTextOnlyMode) {
-    return simulateReadingDelay(text);
-  }
-
+  const queueStrategy = options?.queueStrategy || 0;
+  if (isTextOnlyMode) return simulateReadingDelay(text);
   const nativeTts = getNativeTtsPlugin();
 
   if (nativeTts) {
@@ -723,7 +720,6 @@ function speakAudioChunk(text, options = {}) {
       const doSpeak = () => {
         const savedSpeed = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('utkio_test_speech_rate') || '1.05') : 1.05;
         const activeRate = (isNaN(savedSpeed) || savedSpeed <= 0) ? 1.05 : savedSpeed;
-        console.log(`[NativeTTS] Speaking with rate: ${activeRate}x (queueStrategy: ${queueStrategy})`);
         const speakParams = {
           text: text,
           lang: 'en-IN',

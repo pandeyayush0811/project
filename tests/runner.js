@@ -15,7 +15,8 @@ const testSuites = [
   { bug: 'Bug 13', file: 'test_bug13_layout_thrashing.js', title: 'Synchronous DOM Geometry Reads & Layout Thrashing' },
   { bug: 'Bug 18', file: 'test_bug18_tts_fallback.js', title: 'Silent Fallback When No Speech Synthesis Engine Detected' },
   { bug: 'Bugs 21 & 24', file: 'test_bug21_24_stt_voice.js', title: 'Android STT Pipeline Deadlock & Indian Male Voice Resolution' },
-  { bug: 'Safe Version 3.0', file: 'test_safe_version_3_stt_bridge.js', title: 'Native STT Bridge, AudioRecord Lifecycle & Auto-Fallback' }
+  { bug: 'Safe Version 3.0', file: 'test_safe_version_3_stt_bridge.js', title: 'Native STT Bridge, AudioRecord Lifecycle & Auto-Fallback' },
+  { bug: 'Pipelined TTS', file: 'test_pipelined_sentence_synthesis.js', title: 'Pipelined Sentence Synthesis & Smart Chunker' }
 ];
 
 console.log('======================================================================');
