@@ -43,6 +43,7 @@ const saveSettingsBtn = document.getElementById('saveSettingsBtn');
 const apiKeyInput = document.getElementById('apiKeyInput');
 const modelSelect = document.getElementById('modelSelect');
 const voiceSelect = document.getElementById('voiceSelect');
+const speedSelect = document.getElementById('speedSelect');
 
 // New DOM elements for Bug 4, 13, 18
 const micPermissionBanner = document.getElementById('mic-permission-banner');
@@ -735,10 +736,13 @@ function speakAudioChunk(text) {
       }, watchdogMs);
 
       const doSpeak = () => {
+        const savedSpeed = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('utkio_test_speech_rate') || '1.30') : 1.30;
+        const activeRate = (isNaN(savedSpeed) || savedSpeed <= 0) ? 1.30 : savedSpeed;
+        console.log(`[NativeTTS] Speaking with rate: ${activeRate}x`);
         const speakParams = {
           text: text,
           lang: 'en-IN',
-          rate: 1.10,
+          rate: activeRate,
           pitch: 1.0,
           volume: 1.0,
           category: 'ambient'
@@ -791,9 +795,11 @@ function speakAudioChunk(text) {
         }
       }, watchdogMs);
 
+      const savedSpeed = typeof localStorage !== 'undefined' ? parseFloat(localStorage.getItem('utkio_test_speech_rate') || '1.30') : 1.30;
+      const activeRate = (isNaN(savedSpeed) || savedSpeed <= 0) ? 1.30 : savedSpeed;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-IN';
-      utterance.rate = 1.10;
+      utterance.rate = activeRate;
       utterance.pitch = 1.0;
 
       if (selectedWebVoice) {
@@ -1134,6 +1140,9 @@ function openSettings() {
   if (voiceSelect) {
     voiceSelect.value = localStorage.getItem('utkio_test_voice_uri') || 'en-in-x-end-network';
   }
+  if (speedSelect) {
+    speedSelect.value = localStorage.getItem('utkio_test_speech_rate') || '1.3';
+  }
   settingsModal.classList.add('open');
 }
 
@@ -1167,6 +1176,9 @@ function saveSettings() {
   if (voiceSelect) {
     localStorage.setItem('utkio_test_voice_uri', voiceSelect.value);
     resolveBestVoices();
+  }
+  if (speedSelect) {
+    localStorage.setItem('utkio_test_speech_rate', speedSelect.value);
   }
   closeSettings();
   setUiState('idle', key ? 'Settings saved! Tap mic to test.' : 'Key removed. Using test simulation mode.');
