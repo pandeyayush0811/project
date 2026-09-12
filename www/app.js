@@ -861,6 +861,7 @@ async function playNextAudioQueueItem() {
       autoRearmTimer = null;
       if (!isListening && !isPlayingAudio && recognition && !isAwaitingPermission && !isThinking) {
         console.log('[Auto-Rearm] Automatically re-arming mic for user turn...');
+        setUiState('listening', 'Listening to you...');
         try {
           recognition.start();
         } catch (e) {
@@ -1212,20 +1213,178 @@ function cleanupSpeechSynthesis() {
   }
 }
 
-// Initialize Speech Recognition (STT)
-function setupSpeechRecognition() {
-  const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
-  if (!SpeechRecognition) {
-    if (btnMic) btnMic.disabled = true;
-    setUiState('error', 'Web Speech API not supported in this browser.');
-    return null;
+// Native Android SpeechRecognizer Bridge Accessor (Level 2 Architecture)
+function getNativeSpeechRecognizer() {
+  if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isPluginAvailable && window.Capacitor.isPluginAvailable('NativeSpeechRecognizer')) {
+    return window.Capacitor.Plugins.NativeSpeechRecognizer;
+  }
+  return null;
+}
+
+class NativeSpeechRecognitionAdapter {
+  constructor(plugin) {
+    this.plugin = plugin;
+    this.lang = 'en-IN';
+    this.continuous = false;
+    this.interimResults = true;
+    this.maxAlternatives = 1;
+    this.onstart = null;
+    this.onresult = null;
+    this.onerror = null;
+    this.onend = null;
+    this._isListening = false;
+    this._fallbackRecognition = null;
+    this._usingFallback = false;
+    this._initFallback();
+    this._bindNativeEvents();
   }
 
-  const r = new SpeechRecognition();
+  _initFallback() {
+    const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (SpeechRecognition) {
+      this._fallbackRecognition = new SpeechRecognition();
+      this._fallbackRecognition.lang = 'en-IN';
+      this._fallbackRecognition.continuous = false;
+      this._fallbackRecognition.interimResults = true;
+      this._fallbackRecognition.maxAlternatives = 1;
+      this._fallbackRecognition.onstart = () => {
+        this._isListening = true;
+        if (typeof this.onstart === 'function') this.onstart();
+      };
+      this._fallbackRecognition.onresult = (e) => {
+        if (typeof this.onresult === 'function') this.onresult(e);
+      };
+      this._fallbackRecognition.onerror = (e) => {
+        this._isListening = false;
+        if (typeof this.onerror === 'function') this.onerror(e);
+      };
+      this._fallbackRecognition.onend = () => {
+        this._isListening = false;
+        if (typeof this.onend === 'function') this.onend();
+      };
+    }
+  }
+
+  _bindNativeEvents() {
+    this.plugin.addListener('onReadyForSpeech', () => {
+      this._isListening = true;
+      if (typeof this.onstart === 'function') this.onstart();
+    });
+
+    this.plugin.addListener('onBeginningOfSpeech', () => {
+      this._isListening = true;
+      if (typeof this.onstart === 'function') this.onstart();
+    });
+
+    this.plugin.addListener('onRmsChanged', (data) => {
+      if (data && typeof data.rmsdB === 'number' && !isScrolling) {
+        const energy = Math.max(0.1, Math.min(1.0, (data.rmsdB + 2) / 12));
+        updateWaveEnergy(true, energy);
+      }
+    });
+
+    this.plugin.addListener('onResult', (data) => {
+      if (!data || typeof data.transcript !== 'string') return;
+      if (typeof this.onresult === 'function') {
+        const fakeItem = [{ transcript: data.transcript }];
+        fakeItem.isFinal = !!data.isFinal;
+        const fakeEvent = {
+          resultIndex: 0,
+          results: [fakeItem]
+        };
+        this.onresult(fakeEvent);
+      }
+    });
+
+    this.plugin.addListener('onError', (data) => {
+      console.warn('[Native STT] Error from native speech recognizer:', data);
+      if (!this._usingFallback && this._fallbackRecognition) {
+        console.warn('[Native STT] Initiating seamless auto-fallback to Web Speech API...');
+        this._usingFallback = true;
+        try {
+          this._fallbackRecognition.start();
+          return;
+        } catch (e) {
+          console.warn('[Native STT] Fallback start failed:', e);
+        }
+      }
+      this._isListening = false;
+      if (typeof this.onerror === 'function') {
+        this.onerror({ error: data?.message || 'speech-error' });
+      }
+    });
+
+    this.plugin.addListener('onEndOfSpeech', () => {
+      this._isListening = false;
+      if (typeof this.onend === 'function') this.onend();
+    });
+  }
+
+  start() {
+    this._isListening = true;
+    this._usingFallback = false;
+    this.plugin.startListening({
+      lang: this.lang || 'en-IN',
+      preferOffline: false
+    }).catch(err => {
+      console.warn('[Native STT Start Error]', err);
+      if (this._fallbackRecognition) {
+        console.warn('[Native STT] Switching to Web Speech API fallback immediately...');
+        this._usingFallback = true;
+        try {
+          this._fallbackRecognition.start();
+          return;
+        } catch (e) { }
+      }
+      this._isListening = false;
+      if (typeof this.onerror === 'function') {
+        this.onerror({ error: 'service-not-allowed' });
+      }
+    });
+  }
+
+  stop() {
+    this._isListening = false;
+    if (this._usingFallback && this._fallbackRecognition) {
+      try { this._fallbackRecognition.stop(); } catch (e) { }
+    } else {
+      this.plugin.stopListening().catch(() => {});
+    }
+  }
+
+  abort() {
+    this._isListening = false;
+    if (this._usingFallback && this._fallbackRecognition) {
+      try { this._fallbackRecognition.abort(); } catch (e) { }
+    } else {
+      this.plugin.cancel().catch(() => {});
+    }
+  }
+}
+
+// Initialize Speech Recognition (STT)
+function setupSpeechRecognition() {
+  const nativePlugin = getNativeSpeechRecognizer();
+  let r = null;
+
+  if (nativePlugin) {
+    console.log('[STT] Initializing Level 2 Native Android SpeechRecognizer Bridge (Zero-Latency Hardware Pipeline)');
+    r = new NativeSpeechRecognitionAdapter(nativePlugin);
+  } else {
+    const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (!SpeechRecognition) {
+      if (btnMic) btnMic.disabled = true;
+      setUiState('error', 'Web Speech API not supported in this browser.');
+      return null;
+    }
+    r = new SpeechRecognition();
+  }
+
   r.lang = 'en-IN';
   r.continuous = false;
   r.interimResults = true;
   r.maxAlternatives = 1;
+
 
   r.onstart = () => {
     isListening = true;
@@ -1342,12 +1501,25 @@ function resetSilenceTimer() {
 
 // Pre-flight Permissions API check
 function checkMicrophonePermissions() {
+  if (typeof localStorage !== 'undefined' && localStorage.getItem('utkio_mic_perm_cache') === 'granted') {
+    hasMicPermissionGranted = true;
+  }
   if (typeof navigator !== 'undefined' && navigator.permissions && navigator.permissions.query) {
     navigator.permissions.query({ name: 'microphone' }).then((permissionStatus) => {
+      if (permissionStatus.state === 'granted') {
+        hasMicPermissionGranted = true;
+        if (typeof localStorage !== 'undefined') localStorage.setItem('utkio_mic_perm_cache', 'granted');
+        if (micPermissionBanner) micPermissionBanner.style.display = 'none';
+      } else if (permissionStatus.state === 'denied') {
+        if (micPermissionBanner) micPermissionBanner.style.display = 'flex';
+      }
       permissionStatus.onchange = () => {
         if (permissionStatus.state === 'granted') {
+          hasMicPermissionGranted = true;
+          if (typeof localStorage !== 'undefined') localStorage.setItem('utkio_mic_perm_cache', 'granted');
           if (micPermissionBanner) micPermissionBanner.style.display = 'none';
         } else if (permissionStatus.state === 'denied') {
+          hasMicPermissionGranted = false;
           if (micPermissionBanner) micPermissionBanner.style.display = 'flex';
         }
       };
@@ -1373,6 +1545,7 @@ function initApp() {
   checkMicrophonePermissions();
   checkBatteryOptimization();
   verifySpeechEngineAvailability();
+  warmTtsEngine();
   recognition = setupSpeechRecognition();
 
   // Passive Transcript Scroll Listener (Bug 13)
@@ -1438,6 +1611,11 @@ function initApp() {
     } else if (isSpeaking || isPlayingAudio) {
       triggerBargeIn();
     } else {
+      isListening = true;
+      // 0ms Optimistic UI transition for instant tactile feedback
+      setUiState('listening', 'Listening to you...');
+      startWaveAnimation(0.7);
+
       if (!hasMicPermissionGranted) {
         isAwaitingPermission = true;
         micPromptPending = true;
@@ -1448,6 +1626,7 @@ function initApp() {
             await navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
               stream.getTracks().forEach(t => t.stop());
               hasMicPermissionGranted = true;
+              if (typeof localStorage !== 'undefined') localStorage.setItem('utkio_mic_perm_cache', 'granted');
               isAwaitingPermission = false;
               micPromptPending = false;
               micBtn.disabled = false;
@@ -1472,15 +1651,28 @@ function initApp() {
         }
       }
 
-      if (recognition && !isListening) {
+      if (recognition) {
         try {
           recognition.start();
         } catch (e) {
           console.warn('[Start error]', e);
+          isListening = false;
+          setUiState('idle');
         }
       }
     }
   });
+
+  // Tactile micro-scale feedback on touch/click
+  micBtn.addEventListener('pointerdown', () => {
+    if (!isListening && !isSpeaking && !isPlayingAudio) {
+      micBtn.style.transform = 'scale(0.95)';
+    }
+  });
+  window.addEventListener('pointerup', () => {
+    micBtn.style.transform = '';
+  });
+
 
   // Settings & Recovery Button Listeners
   if (btnOpenSettings) btnOpenSettings.addEventListener('click', openSettings);
