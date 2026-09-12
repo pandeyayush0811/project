@@ -4,15 +4,20 @@
   "description": "Utkio On-Device Voice Architecture Test App",
   "main": "index.js",
   "scripts": {
-    "build": "powershell -Command \"Copy-Item index.html,app.js,style.css -Destination www -Force\"",
-    "cap:sync": "npm run build && cap sync android",
-    "cap:open": "cap open android"
+    "build": "node scripts/build.js",
+    "start": "node scripts/server.js",
+    "dev": "node scripts/server.js",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "android:build": "npm run cap:sync && cd android && .\\gradlew assembleDebug",
+    "android:run": "npm run cap:sync && cd android && .\\gradlew installDebug"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.5.0",

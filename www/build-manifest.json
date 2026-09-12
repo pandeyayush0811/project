@@ -1,0 +1,18 @@
+{
+  "buildTime": "2026-09-12T13:42:20.078Z",
+  "packageVersion": "1.0.0",
+  "files": {
+    "index.html": {
+      "size": 8565,
+      "hash": "62bb277da654a347b3356fdd57f3d01dcb143189ec9463daf1281e974c53b0bf"
+    },
+    "app.js": {
+      "size": 51303,
+      "hash": "a60e55634663b9b5acc0f72827ea26f28fe7c7f652c7a03c7d2d574ce56172fe"
+    },
+    "style.css": {
+      "size": 12689,
+      "hash": "d2403c25fbd3f8a2d399ad56159ca54a3c215d4a7e977c64dae5c4bec36064eb"
+    }
+  }
+}

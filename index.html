@@ -22,6 +22,22 @@
       </button>
     </header>
 
+    <!-- Runtime Microphone Permission Banner (Bug 4) -->
+    <div id="mic-permission-banner" class="permission-banner permission-alert" style="display:none;">
+      <span>Microphone permission required for voice practice.</span>
+      <button id="btn-open-settings" class="banner-action-btn">Open Settings</button>
+    </div>
+
+    <!-- Speech Synthesis Missing / Warning Banner (Bug 18) -->
+    <div id="tts-warning-banner" class="tts-warning-banner tts-fallback-alert" aria-live="polite" style="display:none;">
+      <span class="banner-text">⚠️ Voice output unavailable: Speech synthesis engine not found.</span>
+      <div class="banner-actions">
+        <button id="retry-tts-btn" class="tts-fallback-btn banner-action-btn">Retry Engine</button>
+        <button id="text-only-mode-btn" class="tts-fallback-btn banner-action-btn text-only-toggle">Text-Only Mode</button>
+      </div>
+      <a href="https://play.google.com/store/apps/details?id=com.google.android.tts" target="_blank" class="install-voice-guide google-tts-link">Install Indian English Voice Pack</a>
+    </div>
+
     <!-- Status indicator row -->
     <div class="status-row">
       <div class="dot" id="statusDot"></div>
@@ -55,6 +71,10 @@
           <div class="empty-chat-subtitle">Tap the mic button and speak in English. Sub-300ms pipeline will stream, chunk, and synthesize speech.</div>
         </div>
       </div>
+      <!-- Floating Jump to Bottom Button (Bug 13) -->
+      <button id="jump-bottom-btn" class="jump-to-bottom" aria-label="Jump to bottom" style="display:none;">
+        ↓ New Message
+      </button>
     </main>
 
     <!-- Mic Dock with audio energy waves -->
@@ -81,6 +101,19 @@
     </footer>
   </div>
 
+  <!-- Speech Services Missing Modal (Bug 4) -->
+  <div class="modal-overlay" id="speech-service-missing-modal" style="display:none;">
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <h2>Speech Services Required</h2>
+      </div>
+      <p style="font-size:0.88rem; color:var(--ink-dim); line-height:1.4;">Google Speech Services is required for native offline speech recognition on Android.</p>
+      <div style="margin-top:16px; display:flex; gap:10px;">
+        <button id="closeSpeechModalBtn" class="btn-primary" type="button">Understood</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Modal (Quick API Key & Model Configuration) -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal-sheet">
@@ -92,6 +125,14 @@
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
+      </div>
+
+      <!-- Speech Engine Health Status (Bug 18) -->
+      <div class="form-group">
+        <label>Speech Synthesis Engine Health</label>
+        <div id="tts-engine-status" class="speech-engine-state" style="font-size:0.82rem; font-weight:600; color:var(--good); padding:6px 0;">
+          Checking engine availability...
+        </div>
       </div>
 
       <div class="form-group">
@@ -109,9 +150,22 @@
       <div class="form-group">
         <label for="modelSelect">Conversational Model</label>
         <select id="modelSelect" class="form-input">
-          <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite (Recommended: Ultra-Low TTFT)</option>
+          <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Recommended: Ultra-Low TTFT)</option>
+          <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite</option>
+          <option value="gemini-3.8-flash">gemini-3.8-flash</option>
+          <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
           <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-          <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="voiceSelect">Assistant Voice (Google Speech Services)</label>
+        <select id="voiceSelect" class="form-input">
+          <option value="en-in-x-end-network">Google Indian Voice 1 - en-in-x-end (Male / High-Fi Cloud)</option>
+          <option value="en-in-x-enc-network">Google Indian Voice 3 - en-in-x-enc (Cloud)</option>
+          <option value="en-in-x-ene-network">Google Indian Voice 2 - en-in-x-ene (Female Cloud)</option>
+          <option value="en-in-x-end-local">Google Indian Voice 1 - Local (Offline Male)</option>
+          <option value="auto">Auto-Detect Best Cloud Voice</option>
         </select>
       </div>
 

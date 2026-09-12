@@ -10,3 +10,8 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# IDE & Build Artefacts
+*.lock
+.vscode/
+android/.idea/
